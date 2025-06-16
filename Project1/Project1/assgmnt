@@ -1,0 +1,90 @@
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <unordered_map>
+#include <string>
+using namespace std;
+
+class CDR {
+    string MSISDN;
+    string BrandName;
+    string MMCMNC;
+    string callType;
+    int duration;
+    int download;
+    int upload;
+    string thirdpartyMSISDN;
+    string thirdPartyMMCMNC;
+
+public:
+    CDR(const string& line) {
+        stringstream ss(line);
+        string temp;
+        getline(ss, temp, '|'); MSISDN = temp;
+        getline(ss, temp, '|'); BrandName = temp;
+        getline(ss, temp, '|'); MMCMNC = temp;
+        getline(ss, temp, '|'); callType = temp;
+        getline(ss, temp, '|'); duration = stoi(temp);
+        getline(ss, temp, '|'); download = stoi(temp);
+        getline(ss, temp, '|'); upload = stoi(temp);
+        getline(ss, temp, '|'); thirdpartyMSISDN = temp;
+        getline(ss, temp, '|'); thirdPartyMMCMNC = temp;
+    }
+
+    string getCallType() const { return callType; }
+    int getDownload() const { return download; }
+    int getUpload() const { return upload; }
+};
+
+class CustomerBill {
+    int incomingVoice = 0;
+    int outgoingVoice = 0;
+    int incomingSMS = 0;
+    int outgoingSMS = 0;
+    int mbDownloaded = 0;
+    int mbUploaded = 0;
+
+public:
+    void processCDR(const CDR& cdr) {
+        if (cdr.getCallType() == "MOC") {
+            outgoingVoice++;
+        } else if (cdr.getCallType() == "MTC") {
+            incomingVoice++;
+        } else if (cdr.getCallType() == "SMS-MO") {
+            outgoingSMS++;
+        } else if (cdr.getCallType() == "SMS-MT") {
+            incomingSMS++;
+        } else if (cdr.getCallType() == "GPRS") {
+            mbDownloaded += cdr.getDownload();
+            mbUploaded += cdr.getUpload();
+        }
+    }
+
+    void printBill() const {
+        cout << "Customer Billing Summary:\n";
+        cout << "Incoming Voice Calls: " << incomingVoice << endl;
+        cout << "Outgoing Voice Calls: " << outgoingVoice << endl;
+        cout << "Incoming SMS: " << incomingSMS << endl;
+        cout << "Outgoing SMS: " << outgoingSMS << endl;
+        cout << "Downloaded Data (MB): " << mbDownloaded << endl;
+        cout << "Uploaded Data (MB): " << mbUploaded << endl;
+    }
+};
+
+int main() {
+    ifstream file("cdr_data.txt");
+    if (!file.is_open()) {
+        cerr << "Error opening file!" << endl;
+        return 1;
+    }
+
+    CustomerBill bill;
+    string line;
+    while (getline(file, line)) {
+        CDR cdr(line);
+        bill.processCDR(cdr);
+    }
+
+    bill.printBill();
+    return 0;
+}
