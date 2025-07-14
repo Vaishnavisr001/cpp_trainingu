@@ -1,0 +1,30 @@
+#include <iostream>
+#include "Lexer.h"
+
+using namespace gw_basic;
+
+int main() {
+    // Fixed test line: 10 PRINT "HELLO"
+    std::string input = "10 PRINT \"HELLO\"";
+
+    Lexer lexer(input);                     // Create a lexer
+    std::vector<Token> tokens = lexer.tokenize();  // Get tokens
+
+    // Print each token
+    for (const Token& token : tokens) {
+        std::cout << "Token: " << token.value << " [";
+
+        switch (token.type) {
+            case TokenType::NUMBER: std::cout << "NUMBER"; break;
+            case TokenType::STRING: std::cout << "STRING"; break;
+            case TokenType::IDENTIFIER: std::cout << "IDENTIFIER"; break;
+            case TokenType::KEYWORD: std::cout << "KEYWORD"; break;
+            case TokenType::SYMBOL: std::cout << "SYMBOL"; break;
+            case TokenType::END_OF_LINE: std::cout << "END_OF_LINE"; break;
+        }
+
+        std::cout << "]\n";
+    }
+
+    return 0;
+}
