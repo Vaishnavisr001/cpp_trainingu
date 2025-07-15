@@ -1,156 +1,30 @@
-// ===================== Token.h =====================
 #ifndef TOKEN_H
 #define TOKEN_H
 
 #include <string>
 
-namespace gw_basic {
-
-// Token types in BASIC
+// This enum defines the different types of tokens
+// that the lexer can identify from a BASIC program line.
 enum class TokenType {
-    NUMBER,
-    STRING,
-    IDENTIFIER,
-    KEYWORD,
-    SYMBOL,
-    END_OF_LINE
+    NUMBER,        // e.g., 10, 123, 3
+    STRING,        // Text inside quotes, e.g., "HELLO"
+    IDENTIFIER,    // Variable names or labels, e.g., A, X1
+    KEYWORD,       // Commands like PRINT, INPUT, IF, etc.
+    SYMBOL,        // Characters like +, -, =, (, )
+    COMMENT,       // Comments starting with REM
+    END_OF_LINE    // Special token to mark end of the line
 };
 
-// Token structure
+// Token holds the type, actual text, and position in the line
 struct Token {
-    TokenType type;
-    std::string value;
-    size_t position;
+    TokenType type;        // What kind of token this is
+    std::string value;     // The actual content (like "PRINT" or "10")
+    size_t position;       // Where in the line this token starts
 
+    // Constructor to set values when creating a token
     Token(TokenType t, const std::string& v, size_t pos)
         : type(t), value(v), position(pos) {}
 };
 
-} // namespace gw_basic
-
 #endif // TOKEN_H
 
-
-// ===================== Lexer.h =====================
-#ifndef LEXER_H
-#define LEXER_H
-
-#include <string>
-#include <vector>
-#include "Token.h"
-
-namespace gw_basic {
-
-class Lexer {
-public:
-    explicit Lexer(const std::string& sourceLine);
-    std::vector<Token> tokenize();
-
-private:
-    std::string line;
-    size_t pos;
-
-    char peek() const;
-    char get();
-    void skipWhitespace();
-
-    Token number();
-    Token wordOrKeyword();
-    Token stringLiteral();
-};
-
-} // namespace gw_basic
-
-#endif // LEXER_H
-
-
-// ===================== Lexer.cpp =====================
-#include "Lexer.h"
-#include <cctype>
-#include <unordered_set>
-
-namespace gw_basic {
-
-const std::unordered_set<std::string> keywords = {
-    "PRINT", "INPUT", "LET", "GOTO", "IF", "THEN",
-    "FOR", "TO", "NEXT", "REM", "END"
-};
-
-Lexer::Lexer(const std::string& sourceLine)
-    : line(sourceLine), pos(0) {}
-
-char Lexer::peek() const {
-    return (pos < line.length()) ? line[pos] : '\0';
-}
-
-char Lexer::get() {
-    return (pos < line.length()) ? line[pos++] : '\0';
-}
-
-void Lexer::skipWhitespace() {
-    while (std::isspace(peek())) {
-        get();
-    }
-}
-
-Token Lexer::number() {
-    size_t start = pos;
-    std::string num;
-    while (std::isdigit(peek())) {
-        num += get();
-    }
-    return Token(TokenType::NUMBER, num, start);
-}
-
-Token Lexer::wordOrKeyword() {
-    size_t start = pos;
-    std::string word;
-    while (std::isalnum(peek())) {
-        word += get();
-    }
-    if (keywords.count(word)) {
-        return Token(TokenType::KEYWORD, word, start);
-    }
-    return Token(TokenType::IDENTIFIER, word, start);
-}
-
-Token Lexer::stringLiteral() {
-    size_t start = pos;
-    get(); // Skip opening quote
-    std::string str;
-    while (peek() != '"' && peek() != '\0') {
-        str += get();
-    }
-    get(); // Skip closing quote
-    return Token(TokenType::STRING, str, start);
-}
-
-std::vector<Token> Lexer::tokenize() {
-    std::vector<Token> tokens;
-
-    while (pos < line.length()) {
-        skipWhitespace();
-        char current = peek();
-
-        if (std::isdigit(current)) {
-            tokens.push_back(number());
-        } else if (std::isalpha(current)) {
-            tokens.push_back(wordOrKeyword());
-        } else if (current == '"') {
-            tokens.push_back(stringLiteral());
-        } else if (std::ispunct(current)) {
-            std::string sym(1, get());
-            tokens.emplace_back(TokenType::SYMBOL, sym, pos - 1);
-        } else {
-            get(); // Skip unknown
-        }
-    }
-
-    tokens.emplace_back(TokenType::END_OF_LINE, "", pos);
-    return tokens;
-}
-
-} // namespace gw_basic
-
-
-// ===================== mai
