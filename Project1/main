@@ -1,30 +1,156 @@
-#include <iostream>
+// ===================== Token.h =====================
+#ifndef TOKEN_H
+#define TOKEN_H
+
+#include <string>
+
+namespace gw_basic {
+
+// Token types in BASIC
+enum class TokenType {
+    NUMBER,
+    STRING,
+    IDENTIFIER,
+    KEYWORD,
+    SYMBOL,
+    END_OF_LINE
+};
+
+// Token structure
+struct Token {
+    TokenType type;
+    std::string value;
+    size_t position;
+
+    Token(TokenType t, const std::string& v, size_t pos)
+        : type(t), value(v), position(pos) {}
+};
+
+} // namespace gw_basic
+
+#endif // TOKEN_H
+
+
+// ===================== Lexer.h =====================
+#ifndef LEXER_H
+#define LEXER_H
+
+#include <string>
+#include <vector>
+#include "Token.h"
+
+namespace gw_basic {
+
+class Lexer {
+public:
+    explicit Lexer(const std::string& sourceLine);
+    std::vector<Token> tokenize();
+
+private:
+    std::string line;
+    size_t pos;
+
+    char peek() const;
+    char get();
+    void skipWhitespace();
+
+    Token number();
+    Token wordOrKeyword();
+    Token stringLiteral();
+};
+
+} // namespace gw_basic
+
+#endif // LEXER_H
+
+
+// ===================== Lexer.cpp =====================
 #include "Lexer.h"
+#include <cctype>
+#include <unordered_set>
 
-using namespace gw_basic;
+namespace gw_basic {
 
-int main() {
-    // Fixed test line: 10 PRINT "HELLO"
-    std::string input = "10 PRINT \"HELLO\"";
+const std::unordered_set<std::string> keywords = {
+    "PRINT", "INPUT", "LET", "GOTO", "IF", "THEN",
+    "FOR", "TO", "NEXT", "REM", "END"
+};
 
-    Lexer lexer(input);                     // Create a lexer
-    std::vector<Token> tokens = lexer.tokenize();  // Get tokens
+Lexer::Lexer(const std::string& sourceLine)
+    : line(sourceLine), pos(0) {}
 
-    // Print each token
-    for (const Token& token : tokens) {
-        std::cout << "Token: " << token.value << " [";
+char Lexer::peek() const {
+    return (pos < line.length()) ? line[pos] : '\0';
+}
 
-        switch (token.type) {
-            case TokenType::NUMBER: std::cout << "NUMBER"; break;
-            case TokenType::STRING: std::cout << "STRING"; break;
-            case TokenType::IDENTIFIER: std::cout << "IDENTIFIER"; break;
-            case TokenType::KEYWORD: std::cout << "KEYWORD"; break;
-            case TokenType::SYMBOL: std::cout << "SYMBOL"; break;
-            case TokenType::END_OF_LINE: std::cout << "END_OF_LINE"; break;
+char Lexer::get() {
+    return (pos < line.length()) ? line[pos++] : '\0';
+}
+
+void Lexer::skipWhitespace() {
+    while (std::isspace(peek())) {
+        get();
+    }
+}
+
+Token Lexer::number() {
+    size_t start = pos;
+    std::string num;
+    while (std::isdigit(peek())) {
+        num += get();
+    }
+    return Token(TokenType::NUMBER, num, start);
+}
+
+Token Lexer::wordOrKeyword() {
+    size_t start = pos;
+    std::string word;
+    while (std::isalnum(peek())) {
+        word += get();
+    }
+    if (keywords.count(word)) {
+        return Token(TokenType::KEYWORD, word, start);
+    }
+    return Token(TokenType::IDENTIFIER, word, start);
+}
+
+Token Lexer::stringLiteral() {
+    size_t start = pos;
+    get(); // Skip opening quote
+    std::string str;
+    while (peek() != '"' && peek() != '\0') {
+        str += get();
+    }
+    get(); // Skip closing quote
+    return Token(TokenType::STRING, str, start);
+}
+
+std::vector<Token> Lexer::tokenize() {
+    std::vector<Token> tokens;
+
+    while (pos < line.length()) {
+        skipWhitespace();
+        char current = peek();
+
+        if (std::isdigit(current)) {
+            tokens.push_back(number());
+        } else if (std::isalpha(current)) {
+            tokens.push_back(wordOrKeyword());
+        } else if (current == '"') {
+            tokens.push_back(stringLiteral());
+        } else if (std::ispunct(current)) {
+            std::string sym(1, get());
+            tokens.emplace_back(TokenType::SYMBOL, sym, pos - 1);
+        } else {
+            get(); // Skip unknown
         }
-
-        std::cout << "]\n";
     }
 
-    return 0;
+    tokens.emplace_back(TokenType::END_OF_LINE, "", pos);
+    return tokens;
 }
+
+} // namespace gw_basic
+
+
+// ===================== mai
